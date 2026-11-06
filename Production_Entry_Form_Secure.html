@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Production Data Entry - Secure</title>
+<style>
+:root{
+  --bg:#f3f5f8; --card:#ffffff; --ink:#1c2733; --mut:#5d6978; --line:#d3dae3;
+  --btn:#1f4e78; --btn2:#2e75b6; --ok:#1e7e46; --bad:#b83227; --inp:#fffdf0; --calc:#eceff3; --head:#e6edf5;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#12161c; --card:#1a212a; --ink:#e8edf3; --mut:#9aa7b6; --line:#2f3a47;
+        --btn:#2f6fa8; --btn2:#3b82c4; --ok:#4cc17e; --bad:#ff7b6e; --inp:#222b36; --calc:#252e3a; --head:#222c38;}
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+header{background:var(--btn);color:#fff;padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+header h1{font-size:18px;margin:0}
+.hr{display:flex;gap:10px;align-items:center;font-size:13px}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+nav button{background:rgba(255,255,255,.15);color:#fff;border:0;padding:8px 14px;border-radius:6px;font-size:14px;cursor:pointer}
+nav button.on{background:#fff;color:#1f4e78;font-weight:bold}
+#logoutBtn{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.7);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px}
+main{max-width:1100px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h2{font-size:14px;margin:0 0 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:9px;border:1px solid var(--line);border-radius:6px;background:var(--inp);color:var(--ink)}
+input[readonly]{background:var(--calc)}
+input[type=checkbox]{width:auto}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--btn2);border-color:var(--btn2)}
+.row{display:flex;gap:6px}
+.row input{flex:1;min-width:0}
+button.b{background:var(--btn);color:#fff;border:0;border-radius:6px;padding:10px 16px;font-size:15px;cursor:pointer}
+button.b:hover{background:var(--btn2)}
+button.b:disabled{opacity:.6;cursor:wait}
+button.b.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.b.sm{padding:6px 10px;font-size:13px}
+button.b.del{background:transparent;color:var(--bad);border:1px solid var(--bad)}
+.stamp{padding:0 12px;white-space:nowrap}
+.calc{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.calc div{background:var(--calc);border-radius:8px;padding:10px;text-align:center}
+.calc b{display:block;font-size:20px;margin-top:2px}
+.calc span{font-size:12px;color:var(--mut)}
+.err{background:rgba(184,50,39,.12);border:1px solid var(--bad);color:var(--bad);padding:10px;border-radius:8px;margin-bottom:12px;font-size:14px}
+.err ul{margin:4px 0 0 18px;padding:0}
+.note{background:rgba(255,242,204,.6);border:1px solid #e0c97a;color:#5a4a00;padding:10px;border-radius:8px;margin-bottom:12px;font-size:14px}
+@media (prefers-color-scheme:dark){.note{background:#3a3320;color:#f0dc9a;border-color:#6b5c25}}
+.hide{display:none!important}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:12px}
+.bar>div{min-width:140px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:left}
+th{background:var(--head);position:sticky;top:0}
+td.n,th.n{text-align:right}
+tfoot td{font-weight:bold;background:var(--head)}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ok);color:#fff;padding:11px 20px;border-radius:24px;font-size:15px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:99;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+.tiny{font-size:12px;color:var(--mut)}
+textarea{min-height:140px;font-size:14px}
+#auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+#auth .box{width:100%;max-width:400px}
+#auth h1{font-size:20px;margin:0 0 4px}
+#auth .sub{color:var(--mut);font-size:13px;margin:0 0 14px}
+.fld{margin-bottom:12px}
+.link{background:none;border:0;color:var(--btn2);text-decoration:underline;cursor:pointer;font-size:13px;padding:0}
+</style>
+</head>
+<body>
+
+<!-- =============== LOGIN / SETUP =============== -->
+<div id="auth">
+  <div class="card box">
+    <h1>Production Data Entry</h1>
+    <div id="authWarn" class="note hide"></div>
+    <div id="authMsg" class="err hide"></div>
+
+    <div id="setupBox" class="hide">
+      <p class="sub">First-time setup. Create the <b>administrator</b> account. All data on this device is encrypted with this password.</p>
+      <form id="setupForm" autocomplete="off">
+        <div class="fld"><label for="s_id">Administrator user ID</label><input id="s_id" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+        <div class="fld"><label for="s_pw">Password (at least 8 characters)</label><input id="s_pw" type="password" autocomplete="new-password"></div>
+        <div class="fld"><label for="s_pw2">Confirm password</label><input id="s_pw2" type="password" autocomplete="new-password"></div>
+        <div class="note"><b>Write this password down and keep it safe.</b> If every administrator forgets their password, the encrypted data cannot be recovered. Create a second administrator later and export backups regularly.</div>
+        <button class="b" type="submit" id="setupBtn" style="width:100%">Create account and start</button>
+      </form>
+      <p class="tiny" style="margin-top:12px">Moving from another device? <button class="link" type="button" id="restoreLink">Restore an encrypted backup</button>
+      <input type="file" id="restoreFileSetup" accept=".json,application/json" class="hide"></p>
+    </div>
+
+    <div id="loginBox" class="hide">
+      <p class="sub">Sign in to continue.</p>
+      <form id="loginForm" autocomplete="on">
+        <div class="fld"><label for="l_id">User ID</label><input id="l_id" name="username" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+        <div class="fld"><label for="l_pw">Password</label><input id="l_pw" name="password" type="password" autocomplete="current-password"></div>
+        <div class="fld"><label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="showPw"> Show password</label></div>
+        <button class="b" type="submit" id="loginBtn" style="width:100%">Sign in</button>
+      </form>
+      <p class="tiny" style="margin-top:12px">Forgot your password? Ask your administrator to reset it.</p>
+    </div>
+  </div>
+</div>
+
+<!-- =============== APP =============== -->
+<div id="app" class="hide">
+<header>
+  <h1>Production Data Entry</h1>
+  <nav id="nav">
+    <button data-tab="entry" class="on">New Entry</button>
+    <button data-tab="records">Records</button>
+    <button data-tab="summary" data-roles="admin,supervisor">Summary</button>
+    <button data-tab="settings" data-roles="admin,supervisor">Settings</button>
+    <button data-tab="users" data-roles="admin">Users</button>
+    <button data-tab="account">My Account</button>
+  </nav>
+  <div class="hr"><span id="who"></span><button id="logoutBtn" type="button">Log out</button></div>
+</header>
+
+<main>
+<div id="storeWarn" class="note hide"><b>Storage is blocked in this browser.</b> Nothing can be saved after you close this page. Open the file in a normal (non-private) browser window.</div>
+
+<!-- ================= ENTRY ================= -->
+<section id="tab-entry">
+  <div id="editBar" class="note hide">Editing an existing entry. <button class="b sm sec" type="button" id="cancelEdit">Cancel edit</button></div>
+  <div id="errBox" class="err hide"></div>
+  <form id="form" autocomplete="off" novalidate>
+
+    <div class="card">
+      <h2>Basic</h2>
+      <div class="grid">
+        <div><label for="f_date">Date</label><input type="date" id="f_date"></div>
+        <div><label for="f_shift">Shift</label><select id="f_shift"></select></div>
+        <div><label for="f_operator">Operator ID</label><input id="f_operator" list="dl_operator" autocapitalize="characters"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Job time</h2>
+      <div class="grid">
+        <div><label for="f_start">Job Start Time</label>
+          <div class="row"><input type="time" id="f_start"><button type="button" class="b sm stamp" data-now="f_start">Now</button></div></div>
+        <div><label for="f_end">Job End Time</label>
+          <div class="row"><input type="time" id="f_end"><button type="button" class="b sm stamp" data-now="f_end">Now</button></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Drawing</h2>
+      <div class="grid">
+        <div><label for="f_drawing">Drawing No</label><input id="f_drawing" list="dl_drawing" autocapitalize="characters"></div>
+        <div><label for="f_rev">Revision</label><input id="f_rev" autocapitalize="characters"></div>
+        <div><label for="f_item">Item No</label><input id="f_item"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Quantity</h2>
+      <div class="grid">
+        <div><label for="f_total">Total Qty</label><input type="number" inputmode="numeric" min="0" step="1" id="f_total"></div>
+        <div><label for="f_output">Output Qty (good)</label><input type="number" inputmode="numeric" min="0" step="1" id="f_output"></div>
+        <div><label for="f_rej">Rejected Qty</label><input type="number" inputmode="numeric" min="0" step="1" id="f_rej"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Timing (minutes)</h2>
+      <div class="grid">
+        <div><label for="f_setup">Setup Time</label><input type="number" inputmode="decimal" min="0" step="any" id="f_setup"></div>
+        <div><label for="f_lu">Loading / Unloading Time</label><input type="number" inputmode="decimal" min="0" step="any" id="f_lu"></div>
+        <div><label for="f_cycle">Cycle Time</label><input type="number" inputmode="decimal" min="0" step="any" id="f_cycle"></div>
+        <div><label for="f_idle">M/c Idle Time</label><input type="number" inputmode="decimal" min="0" step="any" id="f_idle"></div>
+        <div><label for="f_series">No. of Setup Series</label><input type="number" inputmode="numeric" min="0" step="1" id="f_series"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Remarks</h2>
+      <textarea id="f_remarks" style="min-height:64px" maxlength="500"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>Auto-calculated</h2>
+      <div class="calc">
+        <div><span>Job Duration</span><b id="c_dur">-</b></div>
+        <div><span>Rejection %</span><b id="c_rej">-</b></div>
+        <div><span>Balance Qty</span><b id="c_bal">-</b></div>
+        <div><span>Productive Time</span><b id="c_prod">-</b></div>
+        <div><span>Today (this operator)</span><b id="c_today">-</b></div>
+      </div>
+    </div>
+
+    <div class="bar">
+      <button class="b" type="submit" id="saveBtn">Save Entry</button>
+      <button class="b sec" type="button" id="clearBtn">Clear form</button>
+    </div>
+  </form>
+  <datalist id="dl_operator"></datalist>
+  <datalist id="dl_drawing"></datalist>
+</section>
+
+<!-- ================= RECORDS ================= -->
+<section id="tab-records" class="hide">
+  <div class="card">
+    <p class="tiny" id="recScope"></p>
+    <div class="bar">
+      <div><label>From</label><input type="date" id="r_from"></div>
+      <div><label>To</label><input type="date" id="r_to"></div>
+      <div><label>Search (operator / drawing / remarks)</label><input id="r_q"></div>
+      <button class="b" type="button" id="exportBtn" data-roles="admin,supervisor">Export CSV</button>
+      <button class="b sec" type="button" id="importBtn" data-roles="admin">Import CSV</button>
+      <input type="file" id="importFile" accept=".csv,text/csv" class="hide">
+    </div>
+    <div class="tw"><table id="recTable"></table></div>
+    <p class="tiny" id="recInfo"></p>
+    <p class="tiny" data-roles="admin,supervisor">CSV files are <b>not encrypted</b>. Store them somewhere safe and delete copies you no longer need.</p>
+  </div>
+</section>
+
+<!-- ================= SUMMARY ================= -->
+<section id="tab-summary" class="hide">
+  <div class="card">
+    <div class="bar">
+      <div><label>From</label><input type="date" id="s_from"></div>
+      <div><label>To</label><input type="date" id="s_to"></div>
+    </div>
+    <div id="sumOut"></div>
+  </div>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+<section id="tab-settings" class="hide">
+  <div class="card">
+    <h2>Lists (one per line)</h2>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <div><label for="set_shifts">Shifts</label><textarea id="set_shifts"></textarea></div>
+      <div><label for="set_operators">Operator IDs</label><textarea id="set_operators"></textarea></div>
+      <div><label for="set_drawings">Drawing Nos</label><textarea id="set_drawings"></textarea></div>
+    </div>
+    <div class="bar" style="margin-top:12px"><button class="b" type="button" id="saveLists">Save lists</button></div>
+    <p class="tiny">New operator IDs and drawing numbers typed on the entry form are added automatically. The shift is suggested from the current time (1st shift 06:00-14:00, 2nd 14:00-22:00, 3rd 22:00-06:00, in the order of your list).</p>
+  </div>
+  <div class="card" data-roles="admin">
+    <h2>Security</h2>
+    <div class="bar">
+      <div style="max-width:220px"><label for="set_idle">Auto log-out after inactivity (minutes)</label><input type="number" min="1" max="240" step="1" id="set_idle"></div>
+      <button class="b" type="button" id="saveIdle">Save</button>
+    </div>
+  </div>
+  <div class="card" data-roles="admin">
+    <h2>Data and backup</h2>
+    <p class="tiny">Everything is stored encrypted inside this browser on this device only; nothing is sent anywhere. An <b>encrypted backup</b> is a file that only opens with the user IDs and passwords that existed when it was made.</p>
+    <div class="bar">
+      <button class="b" type="button" id="encExport">Download encrypted backup</button>
+      <button class="b sec" type="button" id="encRestoreBtn">Restore encrypted backup</button>
+      <input type="file" id="encRestoreFile" accept=".json,application/json" class="hide">
+      <button class="b del" type="button" id="wipeBtn">Delete ALL entries</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= USERS ================= -->
+<section id="tab-users" class="hide">
+  <div class="card">
+    <h2>Users</h2>
+    <div class="tw"><table id="userTable"></table></div>
+    <p class="tiny"><b>Operator</b>: enters jobs and sees only their own entries (can fix their own entries on the same day). <b>Supervisor</b>: sees and edits all entries, summary, CSV export, lists. <b>Administrator</b>: everything, including users, backup and import.</p>
+  </div>
+  <div class="card">
+    <h2>Add user</h2>
+    <div class="grid">
+      <div><label for="u_id">User ID (letters, numbers . _ -)</label><input id="u_id" autocapitalize="none" spellcheck="false" autocomplete="off"></div>
+      <div><label for="u_pw">Temporary password (min 8)</label><input id="u_pw" type="text" autocomplete="off"></div>
+      <div><label for="u_role">Role</label><select id="u_role"><option value="operator">Operator</option><option value="supervisor">Supervisor</option><option value="admin">Administrator</option></select></div>
+    </div>
+    <div class="bar" style="margin-top:12px"><button class="b" type="button" id="addUserBtn">Add user</button></div>
+    <p class="tiny">The user must choose their own password the first time they sign in.</p>
+  </div>
+  <div class="card">
+    <h2>Reset a password</h2>
+    <div class="grid">
+      <div><label for="r_user">User</label><select id="r_user"></select></div>
+      <div><label for="r_pw">New temporary password (min 8)</label><input id="r_pw" type="text" autocomplete="off"></div>
+    </div>
+    <div class="bar" style="margin-top:12px"><button class="b" type="button" id="resetPwBtn">Reset password</button></div>
+  </div>
+</section>
+
+<!-- ================= ACCOUNT ================= -->
+<section id="tab-account" class="hide">
+  <div class="card">
+    <h2>My account</h2>
+    <p id="a_who"></p>
+    <div id="chgNote" class="note hide">You must choose a new password before you can continue.</div>
+    <div class="grid" style="max-width:520px">
+      <div><label for="a_cur">Current password</label><input id="a_cur" type="password" autocomplete="current-password"></div>
+      <div><label for="a_new">New password (min 8)</label><input id="a_new" type="password" autocomplete="new-password"></div>
+      <div><label for="a_new2">Confirm new password</label><input id="a_new2" type="password" autocomplete="new-password"></div>
+    </div>
+    <div class="bar" style="margin-top:12px"><button class="b" type="button" id="chgPwBtn">Change password</button></div>
+  </div>
+</section>
+</main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ================= constants & state ================= */
+var AUTH_KEY='productionEntryForm.auth.v2', DATA_KEY='productionEntryForm.data.v2', FAIL_KEY='productionEntryForm.fail.v2', OLD_KEY='productionEntryForm.v1';
+var ITER=250000;
+var FIELDS=['date','shift','operator','start','end','drawing','rev','item','total','output','rej','setup','lu','cycle','idle','series','remarks'];
+var HEAD=['Date','Shift','Operator ID','Job Start Time','Job End Time','Drawing No','Revision','Item No','Total Qty','Output Qty','Rejected Qty','Setup Time (min)','Loading/Unloading Time (min)','Cycle Time (min)','M/c Idle Time (min)','No. of Setup Series','Remarks','Job Duration (min)','Rejection %','Balance Qty'];
+var AUD=['Entered By','Entered At','Last Edited By','Last Edited At'];
+var ROLES={admin:'Administrator',supervisor:'Supervisor',operator:'Operator'};
+
+var auth=null, dataKey=null, store=null, me=null, lastUserKey=null;
+var memOnly=false, editingId=null, saveQ=Promise.resolve(), idleTimer=null, lastTouch=0, forceChange=false;
+var enc=new TextEncoder(), dec=new TextDecoder();
+
+function $(id){return document.getElementById(id);}
+function on(el,flag){el.classList.toggle('hide',!flag);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function pad(n){return (n<10?'0':'')+n;}
+function todayISO(){var d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());}
+function stamp(){var d=new Date();return todayISO()+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
+function nowHM(){var d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes());}
+function num(v){var x=parseFloat(v);return isNaN(x)?0:x;}
+function fmt(x){if(x===''||x==null||isNaN(x))return '';return Number.isInteger(x)?String(x):String(Math.round(x*100)/100);}
+function toMin(t){if(!t||t.indexOf(':')<0)return null;var p=t.split(':');return (+p[0])*60+(+p[1]);}
+function duration(s,e){var a=toMin(s),b=toMin(e);if(a==null||b==null)return null;return ((b-a)%1440+1440)%1440;}
+function showDate(iso){if(!iso)return '';var p=iso.split('-');if(p.length!==3)return iso;var m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1];return p[2]+'-'+m+'-'+p[0];}
+function toast(msg,bad){var t=$('toast');t.textContent=msg;t.style.background=bad?'var(--bad)':'var(--ok)';t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('show');},2600);}
+
+/* ================= browser storage ================= */
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);return true;}catch(e){return false;}}
+function lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
+
+/* ================= crypto ================= */
+function b64(buf){var b=new Uint8Array(buf),s='';for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
+function unb64(s){var bin=atob(s),b=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return b;}
+async function deriveKey(pw,salt,iter){
+  var km=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:iter,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function wrapKey(key,pw){
+  var salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+  var wk=await deriveKey(pw,salt,ITER), raw=await crypto.subtle.exportKey('raw',key);
+  var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},wk,raw);
+  return {salt:b64(salt),iv:b64(iv),iter:ITER,wrapped:b64(ct)};
+}
+async function unwrapKey(u,pw){
+  var wk=await deriveKey(pw,unb64(u.salt),u.iter);
+  var raw=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(u.iv)},wk,unb64(u.wrapped));
+  return crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},true,['encrypt','decrypt']);
+}
+async function encData(obj){
+  var iv=crypto.getRandomValues(new Uint8Array(12));
+  var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},dataKey,enc.encode(JSON.stringify(obj)));
+  return {iv:b64(iv),ct:b64(ct)};
+}
+async function decData(blob){
+  var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(blob.iv)},dataKey,unb64(blob.ct));
+  return JSON.parse(dec.decode(pt));
+}
+
+/* ================= persistence ================= */
+function defaultStore(){
+  return {records:[],accounts:[],last:{},settings:{idle:15},
+    lists:{shifts:['A (Morning)','B (Afternoon)','C (Night)'],operators:[],drawings:[]}};
+}
+function normalizeStore(s){
+  var d=defaultStore(); s=s||{};
+  s.records=Array.isArray(s.records)?s.records:[];
+  s.accounts=Array.isArray(s.accounts)?s.accounts:[];
+  s.last=s.last||{};
+  s.settings=Object.assign(d.settings,s.settings||{});
+  s.lists=s.lists||{};
+  ['shifts','operators','drawings'].forEach(function(k){if(!Array.isArray(s.lists[k]))s.lists[k]=d.lists[k];});
+  return s;
+}
+function saveAuth(){if(!lsSet(AUTH_KEY,JSON.stringify(auth))){memOnly=true;on($('storeWarn'),true);}}
+function save(){
+  saveQ=saveQ.then(async function(){
+    if(!dataKey||!store)return;
+    var blob=await encData(store);
+    if(!lsSet(DATA_KEY,JSON.stringify(blob))){memOnly=true;on($('storeWarn'),true);}
+  }).catch(function(e){toast('Could not save: '+e.message,true);});
+  return saveQ;
+}
+function loadAuth(){
+  try{var a=JSON.parse(lsGet(AUTH_KEY)||'null');auth=(a&&Array.isArray(a.users))?a:null;}catch(e){auth=null;}
+}
+
+/* ================= auth screen ================= */
+function authMsg(msg,bad){var b=$('authMsg');if(!msg){on(b,false);return;}b.textContent=msg;b.className=bad===false?'note':'err';on(b,true);}
+function showAuth(msg,bad){
+  on($('app'),false); on($('auth'),true);
+  var setup=!auth||!auth.users.length;
+  on($('setupBox'),setup); on($('loginBox'),!setup);
+  authMsg(msg,bad);
+  $('l_pw').value=''; $('s_pw').value=''; $('s_pw2').value='';
+  if(!setup){$('l_id').focus();}
+}
+function setBusy(b){['loginBtn','setupBtn'].forEach(function(id){$(id).disabled=b;});}
+function failState(){try{return JSON.parse(lsGet(FAIL_KEY)||'{}')||{};}catch(e){return {};}}
+function waitLeft(){var f=failState();return Math.max(0,Math.ceil(((f.until||0)-Date.now())/1000));}
+function recordFail(){var f=failState();f.n=(f.n||0)+1;if(f.n>=5){f.until=Date.now()+Math.min(900000,30000*Math.pow(2,f.n-5));}lsSet(FAIL_KEY,JSON.stringify(f));}
+function clearFail(){lsSet(FAIL_KEY,'{}');}
+
+var ID_RE=/^[A-Za-z0-9._-]{3,30}$/;
+function pwErr(pw,idv){
+  if(!pw||pw.length<8)return 'Password must be at least 8 characters.';
+  if(idv&&pw.toLowerCase()===idv.toLowerCase())return 'Password must not be the same as the user ID.';
+  return '';
+}
+function findAuth(idv){var k=idv.toLowerCase();for(var i=0;i<auth.users.length;i++){if(auth.users[i].id===k)return auth.users[i];}return null;}
+function findAcct(k){k=k.toLowerCase();for(var i=0;i<store.accounts.length;i++){if(store.accounts[i].id.toLowerCase()===k)return store.accounts[i];}return null;}
+
+async function doSetup(ev){
+  ev.preventDefault();
+  var idv=$('s_id').value.trim(), pw=$('s_pw').value, pw2=$('s_pw2').value;
+  if(!ID_RE.test(idv)){authMsg('User ID must be 3-30 characters: letters, numbers, dot, underscore or dash.',true);return;}
+  var pe=pwErr(pw,idv); if(pe){authMsg(pe,true);return;}
+  if(pw!==pw2){authMsg('The two passwords do not match.',true);return;}
+  setBusy(true);
+  try{
+    dataKey=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);
+    var w=await wrapKey(dataKey,pw);
+    auth={v:2,users:[Object.assign({id:idv.toLowerCase(),name:idv},w)]};
+    store=defaultStore();
+    store.accounts=[{id:idv,role:'admin',mustChange:false}];
+    var migrated=migrateOld();
+    saveAuth(); await save();
+    me={id:idv,key:idv.toLowerCase(),role:'admin'};
+    enterApp();
+    toast(migrated?('Account created. '+migrated+' earlier entries were imported and the unprotected copy removed.'):'Account created. You are signed in.');
+  }catch(e){dataKey=null;store=null;authMsg('Setup failed: '+e.message,true);}
+  finally{setBusy(false);}
+}
+function migrateOld(){
+  var raw=lsGet(OLD_KEY); if(!raw)return 0;
+  try{
+    var o=JSON.parse(raw), n=0;
+    if(o&&Array.isArray(o.records)){
+      o.records.forEach(function(r){
+        if(!r||!r.date)return; r.id=r.id||(Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+        r.by='(earlier version)'; r.at=''; store.records.push(r); n++;
+        addUnique(store.lists.operators,r.operator); addUnique(store.lists.drawings,r.drawing); addUnique(store.lists.shifts,r.shift);
+      });
+    }
+    if(o&&o.lists){['shifts','operators','drawings'].forEach(function(k){(o.lists[k]||[]).forEach(function(v){addUnique(store.lists[k],v);});});}
+    lsDel(OLD_KEY); return n;
+  }catch(e){return 0;}
+}
+
+async function doLogin(ev){
+  ev.preventDefault();
+  var idv=$('l_id').value.trim(), pw=$('l_pw').value;
+  var w=waitLeft(); if(w>0){authMsg('Too many failed attempts. Try again in '+w+' seconds.',true);return;}
+  if(!idv||!pw){authMsg('Enter your user ID and password.',true);return;}
+  setBusy(true);
+  try{
+    var u=findAuth(idv), key=null;
+    if(u){try{key=await unwrapKey(u,pw);}catch(e){key=null;}}
+    else{try{await deriveKey(pw,new Uint8Array(16),ITER);}catch(e){}}
+    if(!key){recordFail();authMsg('Wrong user ID or password.',true);return;}
+    var st=null, raw=lsGet(DATA_KEY);
+    dataKey=key;
+    if(raw){
+      try{st=normalizeStore(await decData(JSON.parse(raw)));}
+      catch(e){dataKey=null;authMsg('The stored data is damaged or has been altered. An administrator should restore an encrypted backup.',true);return;}
+    }else{
+      st=defaultStore();
+      st.accounts=auth.users.map(function(x,i){return {id:x.name||x.id,role:i===0?'admin':'operator',mustChange:false};});
+    }
+    store=st;
+    var acc=findAcct(u.id);
+    if(!acc){dataKey=null;store=null;authMsg('This account has been disabled. Contact your administrator.',true);return;}
+    clearFail();
+    me={id:acc.id,key:acc.id.toLowerCase(),role:acc.role};
+    forceChange=!!acc.mustChange;
+    enterApp();
+  }catch(e){dataKey=null;store=null;authMsg('Sign-in failed: '+e.message,true);}
+  finally{setBusy(false);}
+}
+
+async function lock(msg){
+  try{await saveQ;}catch(e){}
+  clearTimeout(idleTimer);
+  dataKey=null; store=null; me=null; forceChange=false;
+  ['recTable','sumOut','userTable'].forEach(function(id){$(id).innerHTML='';});
+  ['a_cur','a_new','a_new2'].forEach(function(id){$(id).value='';});
+  showAuth(msg||'You have been signed out.',false);
+}
+
+/* ================= roles ================= */
+function allowed(el){var r=el.getAttribute('data-roles');return !r||r.split(',').indexOf(me.role)>=0;}
+function applyRoles(){
+  document.querySelectorAll('[data-roles]').forEach(function(el){on(el,allowed(el));});
+  if(forceChange){document.querySelectorAll('#nav button').forEach(function(b){on(b,b.getAttribute('data-tab')==='account');});}
+  $('who').textContent=me.id+' ('+ROLES[me.role]+')';
+  var ro=(me.role==='operator'); $('f_operator').readOnly=ro;
+  $('recScope').textContent=(me.role==='operator')?'Showing only your own entries.':'';
+}
+function canModify(x){
+  if(me.role!=='operator')return true;
+  return (x.by||'').toLowerCase()===me.key && (x.at||'').slice(0,10)===todayISO();
+}
+function myRecords(){
+  if(me.role!=='operator')return store.records;
+  return store.records.filter(function(x){return (x.by||'').toLowerCase()===me.key;});
+}
+
+/* ================= entering the app ================= */
+function enterApp(){
+  on($('auth'),false); on($('app'),true); authMsg('');
+  $('l_pw').value='';$('s_pw').value='';$('s_pw2').value='';
+  on($('storeWarn'),memOnly);
+  applyRoles(); fillLists();
+  if(lastUserKey!==me.key||!$('f_date').value)resetForm(false);
+  lastUserKey=me.key;
+  var d0=new Date(); $('s_from').value=d0.getFullYear()+'-'+pad(d0.getMonth()+1)+'-01'; $('s_to').value=todayISO();
+  show(forceChange?'account':'entry');
+  touch(true);
+}
+
+/* ================= idle lock ================= */
+function touch(force){
+  if(!me)return;
+  var now=Date.now(); if(!force&&now-lastTouch<1000)return; lastTouch=now;
+  clearTimeout(idleTimer);
+  var mins=Math.max(1,num(store.settings.idle)||15);
+  idleTimer=setTimeout(function(){lock('You were signed out after '+mins+' minutes of inactivity.');},mins*60000);
+}
+['mousemove','keydown','click','touchstart','scroll'].forEach(function(t){document.addEventListener(t,function(){touch(false);},true);});
+
+/* ================= lists ================= */
+function addUnique(arr,v){v=(v||'').trim();if(!v)return;var low=v.toLowerCase();for(var i=0;i<arr.length;i++){if(arr[i].toLowerCase()===low)return;}arr.push(v);}
+function fillLists(){
+  var L=store.lists, sh=$('f_shift'), cur=sh.value;
+  sh.innerHTML='<option value="">Select...</option>'+L.shifts.map(function(s){return '<option>'+esc(s)+'</option>';}).join('');
+  if(cur)sh.value=cur;
+  $('dl_operator').innerHTML=L.operators.map(function(s){return '<option value="'+esc(s)+'">';}).join('');
+  $('dl_drawing').innerHTML=L.drawings.map(function(s){return '<option value="'+esc(s)+'">';}).join('');
+  $('set_shifts').value=L.shifts.join('\n'); $('set_operators').value=L.operators.join('\n'); $('set_drawings').value=L.drawings.join('\n');
+  $('set_idle').value=store.settings.idle;
+}
+function autoShift(){
+  var n=store.lists.shifts.length; if(!n)return '';
+  var h=new Date().getHours(), idx=(h>=6&&h<14)?0:(h>=14&&h<22)?1:2;
+  return store.lists.shifts[Math.min(idx,n-1)];
+}
+
+/* ================= entry form ================= */
+function lastFor(){return store.last[me.key]||{};}
+function resetForm(keep){
+  FIELDS.forEach(function(k){$('f_'+k).value='';});
+  var L=lastFor();
+  $('f_date').value=keep&&L.date?L.date:todayISO();
+  $('f_shift').value=keep&&L.shift?L.shift:autoShift();
+  $('f_operator').value=(me.role==='operator')?me.id:(L.operator||'');
+  editingId=null; on($('editBar'),false); $('saveBtn').textContent='Save Entry'; on($('errBox'),false);
+  calc();
+}
+function readForm(){var r={};FIELDS.forEach(function(k){r[k]=$('f_'+k).value.trim();});return r;}
+function validate(r){
+  var e=[];
+  if(!r.date)e.push('Date is required.');
+  if(!r.shift)e.push('Select a shift.');
+  if(!r.operator)e.push('Operator ID is required.');
+  if(me.role==='operator'&&r.operator.toLowerCase()!==me.key)e.push('Operators can only enter jobs under their own ID.');
+  if(!r.drawing)e.push('Drawing No is required.');
+  if(r.total==='')e.push('Total Qty is required.');
+  if(r.output==='')e.push('Output Qty is required (enter 0 if none).');
+  ['total','output','rej','series'].forEach(function(k){
+    if(r[k]!==''&&!/^\d+$/.test(r[k]))e.push(HEAD[FIELDS.indexOf(k)]+' must be a whole number, 0 or more.');
+  });
+  ['setup','lu','cycle','idle'].forEach(function(k){
+    var v=r[k]; if(v!==''&&(isNaN(+v)||+v<0||+v>1440))e.push(HEAD[FIELDS.indexOf(k)]+' must be between 0 and 1440 minutes.');
+  });
+  if(/^\d+$/.test(r.total)&&/^\d+$/.test(r.output)&&/^\d*$/.test(r.rej)){
+    if(+r.output+num(r.rej)>+r.total)e.push('Output + Rejected ('+(+r.output+num(r.rej))+') cannot be more than Total Qty ('+r.total+').');
+  }
+  if((r.start&&!r.end)||(!r.start&&r.end))e.push('Enter both Job Start and End time, or leave both empty.');
+  return e;
+}
+function calc(){
+  if(!store||!me)return;
+  var r=readForm(), d=duration(r.start,r.end);
+  $('c_dur').textContent=d==null?'-':d+' min';
+  var o=num(r.output), j=num(r.rej);
+  $('c_rej').textContent=(o+j>0)?(Math.round(j/(o+j)*1000)/10)+'%':'-';
+  $('c_bal').textContent=r.total===''?'-':fmt(num(r.total)-o-j);
+  $('c_prod').textContent=d==null?'-':Math.max(0,d-num(r.idle))+' min';
+  var t=0,c=0;
+  myRecords().forEach(function(x){if(x.date===r.date&&x.operator===r.operator&&x.id!==editingId){c++;t+=num(x.output);}});
+  $('c_today').textContent=r.operator?(c+' jobs / '+t+' pcs'):'-';
+}
+$('form').addEventListener('input',calc);
+$('form').addEventListener('change',calc);
+document.querySelectorAll('[data-now]').forEach(function(b){
+  b.addEventListener('click',function(){$(b.getAttribute('data-now')).value=nowHM();calc();});
+});
+$('f_drawing').addEventListener('change',function(){
+  var v=$('f_drawing').value.trim().toLowerCase(); if(!v||!store)return;
+  for(var i=store.records.length-1;i>=0;i--){
+    var x=store.records[i];
+    if((x.drawing||'').toLowerCase()===v){
+      if(!$('f_rev').value)$('f_rev').value=x.rev||'';
+      if(!$('f_item').value)$('f_item').value=x.item||'';
+      break;
+    }
+  }
+});
+
+$('form').addEventListener('submit',async function(ev){
+  ev.preventDefault();
+  if(!me)return;
+  var r=readForm(), errs=validate(r), box=$('errBox');
+  if(errs.length){
+    box.innerHTML='<b>Please fix:</b><ul>'+errs.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';
+    on(box,true); window.scrollTo({top:0,behavior:'smooth'}); return;
+  }
+  on(box,false);
+  if(r.rej==='')r.rej='0';
+  addUnique(store.lists.operators,r.operator); addUnique(store.lists.drawings,r.drawing);
+  if(editingId){
+    var found=false;
+    for(var i=0;i<store.records.length;i++){
+      var old=store.records[i];
+      if(old.id===editingId){
+        if(!canModify(old)){toast('You are not allowed to change this entry.',true);return;}
+        r.id=old.id; r.by=old.by; r.at=old.at; r.mby=me.id; r.mat=stamp();
+        store.records[i]=r; found=true; break;
+      }
+    }
+    if(!found){toast('Entry no longer exists.',true);return;}
+    toast('Entry updated');
+  }else{
+    r.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    r.by=me.id; r.at=stamp(); r.mby=''; r.mat='';
+    store.records.push(r); toast('Entry saved');
+  }
+  store.last[me.key]={date:r.date,shift:r.shift,operator:r.operator};
+  fillLists(); resetForm(true); $('f_drawing').focus();
+  await save();
+});
+$('clearBtn').addEventListener('click',function(){resetForm(true);});
+$('cancelEdit').addEventListener('click',function(){resetForm(true);});
+
+/* ================= records ================= */
+function filtered(){
+  var f=$('r_from').value,t=$('r_to').value,q=$('r_q').value.trim().toLowerCase();
+  return myRecords().filter(function(x){
+    if(f&&x.date<f)return false; if(t&&x.date>t)return false;
+    if(q&&((x.operator||'')+' '+(x.drawing||'')+' '+(x.remarks||'')+' '+(x.item||'')).toLowerCase().indexOf(q)<0)return false;
+    return true;
+  }).sort(function(a,b){return ((b.date||'')+(b.start||'')).localeCompare((a.date||'')+(a.start||''));});
+}
+function derived(x){
+  var d=duration(x.start,x.end), o=num(x.output), j=num(x.rej);
+  return {dur:d,rejp:(o+j>0)?j/(o+j):null,bal:num(x.total)-o-j};
+}
+function renderRecords(){
+  if(!store||!me)return;
+  var rows=filtered(), tot={total:0,output:0,rej:0,setup:0,idle:0,series:0,dur:0,bal:0};
+  var numCols={8:1,9:1,10:1,11:1,12:1,13:1,14:1,15:1,17:1,18:1,19:1};
+  var h='<thead><tr><th>#</th>'+HEAD.map(function(x,i){return '<th class="'+(numCols[i]?'n':'')+'">'+esc(x)+'</th>';}).join('')+'<th>Entered By</th><th>Entered At</th><th>Last Edited</th><th></th></tr></thead><tbody>';
+  rows.forEach(function(x,i){
+    var d=derived(x);
+    tot.total+=num(x.total);tot.output+=num(x.output);tot.rej+=num(x.rej);tot.setup+=num(x.setup);tot.idle+=num(x.idle);tot.series+=num(x.series);tot.dur+=d.dur||0;tot.bal+=d.bal;
+    var edited=x.mby?(x.mby+' @ '+x.mat):'';
+    var btns=canModify(x)?'<button class="b sm sec" data-edit="'+esc(x.id)+'">Edit</button> <button class="b sm del" data-del="'+esc(x.id)+'">Delete</button>':'';
+    h+='<tr><td>'+(i+1)+'</td><td>'+esc(showDate(x.date))+'</td><td>'+esc(x.shift)+'</td><td>'+esc(x.operator)+'</td><td>'+esc(x.start)+'</td><td>'+esc(x.end)+'</td><td>'+esc(x.drawing)+'</td><td>'+esc(x.rev)+'</td><td>'+esc(x.item)+'</td>'
+      +'<td class="n">'+esc(x.total)+'</td><td class="n">'+esc(x.output)+'</td><td class="n">'+esc(x.rej)+'</td><td class="n">'+esc(x.setup)+'</td><td class="n">'+esc(x.lu)+'</td><td class="n">'+esc(x.cycle)+'</td><td class="n">'+esc(x.idle)+'</td><td class="n">'+esc(x.series)+'</td>'
+      +'<td>'+esc(x.remarks)+'</td><td class="n">'+(d.dur==null?'':d.dur)+'</td><td class="n">'+(d.rejp==null?'':(Math.round(d.rejp*1000)/10)+'%')+'</td><td class="n">'+fmt(d.bal)+'</td>'
+      +'<td>'+esc(x.by)+'</td><td>'+esc(x.at)+'</td><td>'+esc(edited)+'</td><td>'+btns+'</td></tr>';
+  });
+  h+='</tbody>';
+  if(rows.length){
+    var rp=(tot.output+tot.rej>0)?(Math.round(tot.rej/(tot.output+tot.rej)*1000)/10)+'%':'';
+    h+='<tfoot><tr><td colspan="9">Totals ('+rows.length+' entries)</td><td class="n">'+fmt(tot.total)+'</td><td class="n">'+fmt(tot.output)+'</td><td class="n">'+fmt(tot.rej)+'</td><td class="n">'+fmt(tot.setup)+'</td><td></td><td></td><td class="n">'+fmt(tot.idle)+'</td><td class="n">'+fmt(tot.series)+'</td><td></td><td class="n">'+fmt(tot.dur)+'</td><td class="n">'+rp+'</td><td class="n">'+fmt(tot.bal)+'</td><td></td><td></td><td></td><td></td></tr></tfoot>';
+  }
+  $('recTable').innerHTML=h;
+  $('recInfo').textContent=rows.length?'':'No entries yet for this filter.';
+}
+['r_from','r_to','r_q'].forEach(function(id){$(id).addEventListener('input',renderRecords);});
+$('recTable').addEventListener('click',async function(ev){
+  var b=ev.target.closest('button'); if(!b||!store)return;
+  var ide=b.getAttribute('data-edit'), idd=b.getAttribute('data-del');
+  var x=store.records.filter(function(r){return r.id===(ide||idd);})[0];
+  if(!x)return;
+  if(!canModify(x)){toast('You are not allowed to change this entry.',true);return;}
+  if(ide){
+    FIELDS.forEach(function(k){$('f_'+k).value=x[k]||'';});
+    editingId=ide; on($('editBar'),true); $('saveBtn').textContent='Update Entry';
+    show('entry'); calc(); window.scrollTo({top:0});
+  }else if(idd){
+    if(confirm('Delete this entry?')){store.records=store.records.filter(function(r){return r.id!==idd;});renderRecords();toast('Entry deleted');await save();}
+  }
+});
+
+/* ================= CSV ================= */
+function csvCell(v,isText){
+  v=String(v==null?'':v);
+  if(isText&&/^[=+\-@\t\r]/.test(v))v="'"+v;
+  return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+}
+function download(name,text,type){
+  var blob=new Blob([text],{type:type});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},500);
+}
+function exportCSV(){
+  if(me.role==='operator')return;
+  var rows=filtered().slice().reverse();
+  if(!rows.length){toast('Nothing to export',true);return;}
+  var out=[HEAD.concat(AUD).map(function(h){return csvCell(h);}).join(',')];
+  var textKeys={shift:1,operator:1,drawing:1,rev:1,item:1,remarks:1};
+  rows.forEach(function(x){
+    var d=derived(x), cells=FIELDS.map(function(k){return csvCell(x[k],!!textKeys[k]);});
+    cells.push(d.dur==null?'':d.dur, d.rejp==null?'':(Math.round(d.rejp*1000)/10)+'%', fmt(d.bal),
+      csvCell(x.by,true),csvCell(x.at,true),csvCell(x.mby,true),csvCell(x.mat,true));
+    out.push(cells.join(','));
+  });
+  download('production_entries_'+todayISO()+'.csv','﻿'+out.join('\r\n'),'text/csv;charset=utf-8');
+  toast('CSV downloaded (not encrypted - keep it safe)');
+}
+function parseCSV(t){
+  var rows=[],row=[],cur='',q=false; t=t.replace(/^﻿/,'');
+  for(var i=0;i<t.length;i++){
+    var c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(cur);cur='';}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(cur);cur='';rows.push(row);row=[];}
+    else cur+=c;
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(function(r){return r.some(function(x){return x!=='';});});
+}
+function normDate(s){
+  s=(s||'').trim(); if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  var d=new Date(s); if(isNaN(d))return ''; return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
+async function importCSV(text){
+  var rows=parseCSV(text);
+  if(rows.length<2||rows[0].length<FIELDS.length){toast('Not a valid CSV from this form',true);return;}
+  var added=0,skipped=0;
+  for(var i=1;i<rows.length;i++){
+    var c=rows[i], r={};
+    FIELDS.forEach(function(k,j){r[k]=(c[j]||'').trim().replace(/^'/,'');});
+    r.date=normDate(r.date);
+    if(!r.date||!r.operator||!r.drawing){skipped++;continue;}
+    r.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6)+i;
+    r.by='import by '+me.id; r.at=stamp(); r.mby=''; r.mat='';
+    addUnique(store.lists.operators,r.operator); addUnique(store.lists.drawings,r.drawing); addUnique(store.lists.shifts,r.shift);
+    store.records.push(r); added++;
+  }
+  fillLists(); renderRecords(); toast(added+' entries imported'+(skipped?(', '+skipped+' skipped'):''),!added);
+  await save();
+}
+$('exportBtn').addEventListener('click',exportCSV);
+$('importBtn').addEventListener('click',function(){$('importFile').click();});
+$('importFile').addEventListener('change',function(ev){
+  var f=ev.target.files[0]; if(!f||me.role!=='admin')return;
+  if(!confirm('Add the entries from "'+f.name+'" to the existing records?')){ev.target.value='';return;}
+  var rd=new FileReader(); rd.onload=function(){importCSV(String(rd.result));}; rd.readAsText(f); ev.target.value='';
+});
+
+/* ================= summary ================= */
+function group(rows,key){
+  var m={},order=[];
+  rows.forEach(function(x){
+    var k=x[key]||'(blank)'; if(!m[k]){m[k]={jobs:0,total:0,output:0,rej:0,setup:0,idle:0,series:0,dur:0};order.push(k);}
+    var g=m[k],d=derived(x); g.jobs++;g.total+=num(x.total);g.output+=num(x.output);g.rej+=num(x.rej);g.setup+=num(x.setup);g.idle+=num(x.idle);g.series+=num(x.series);g.dur+=d.dur||0;
+  });
+  order.sort();
+  return order.map(function(k){return {k:k,g:m[k]};});
+}
+function sumTable(title,label,list){
+  var h='<h2 style="margin-top:18px">'+esc(title)+'</h2><div class="tw"><table><thead><tr><th>'+esc(label)+'</th><th class="n">Jobs</th><th class="n">Total Qty</th><th class="n">Output</th><th class="n">Rejected</th><th class="n">Rejection %</th><th class="n">Setup (min)</th><th class="n">M/c Idle (min)</th><th class="n">Setup Series</th><th class="n">Job Time (min)</th></tr></thead><tbody>';
+  if(!list.length)h+='<tr><td colspan="10">No entries in this date range.</td></tr>';
+  list.forEach(function(it){
+    var g=it.g, rp=(g.output+g.rej>0)?(Math.round(g.rej/(g.output+g.rej)*1000)/10)+'%':'';
+    h+='<tr><td>'+esc(it.k)+'</td><td class="n">'+g.jobs+'</td><td class="n">'+fmt(g.total)+'</td><td class="n">'+fmt(g.output)+'</td><td class="n">'+fmt(g.rej)+'</td><td class="n">'+rp+'</td><td class="n">'+fmt(g.setup)+'</td><td class="n">'+fmt(g.idle)+'</td><td class="n">'+fmt(g.series)+'</td><td class="n">'+fmt(g.dur)+'</td></tr>';
+  });
+  return h+'</tbody></table></div>';
+}
+function renderSummary(){
+  if(!store||!me||me.role==='operator')return;
+  var f=$('s_from').value,t=$('s_to').value;
+  var rows=store.records.filter(function(x){return (!f||x.date>=f)&&(!t||x.date<=t);});
+  $('sumOut').innerHTML=sumTable('By Operator','Operator ID',group(rows,'operator'))+sumTable('By Drawing No','Drawing No',group(rows,'drawing'))+sumTable('By Shift','Shift',group(rows,'shift'));
+}
+['s_from','s_to'].forEach(function(id){$(id).addEventListener('input',renderSummary);});
+
+/* ================= settings ================= */
+function lines(id){var a=[];$(id).value.split('\n').forEach(function(l){addUnique(a,l);});return a;}
+$('saveLists').addEventListener('click',async function(){
+  if(me.role==='operator')return;
+  store.lists.shifts=lines('set_shifts'); store.lists.operators=lines('set_operators'); store.lists.drawings=lines('set_drawings');
+  if(!store.lists.shifts.length)store.lists.shifts=['A (Morning)','B (Afternoon)','C (Night)'];
+  fillLists(); toast('Lists saved'); await save();
+});
+$('saveIdle').addEventListener('click',async function(){
+  if(me.role!=='admin')return;
+  var v=parseInt($('set_idle').value,10);
+  if(!(v>=1&&v<=240)){toast('Enter minutes between 1 and 240',true);return;}
+  store.settings.idle=v; touch(true); toast('Saved'); await save();
+});
+$('wipeBtn').addEventListener('click',async function(){
+  if(me.role!=='admin')return;
+  if(!store.records.length){toast('No entries to delete',true);return;}
+  if(confirm('Delete ALL '+store.records.length+' entries? Download an encrypted backup first if you may need them.')&&confirm('This cannot be undone. Delete everything?')){
+    store.records=[]; renderRecords(); toast('All entries deleted'); await save();
+  }
+});
+
+/* ---- encrypted backup ---- */
+async function encExport(){
+  if(me.role!=='admin')return;
+  await save();
+  var d=lsGet(DATA_KEY), a=lsGet(AUTH_KEY);
+  if(!d||!a){toast('Nothing stored yet',true);return;}
+  var pack={kind:'productionEntryForm.backup',v:2,created:stamp(),auth:JSON.parse(a),data:JSON.parse(d)};
+  download('production_backup_'+todayISO()+'.json',JSON.stringify(pack),'application/json');
+  toast('Encrypted backup downloaded');
+}
+function restorePack(text){
+  var p; try{p=JSON.parse(text);}catch(e){return 'That file is not a backup from this form.';}
+  if(!p||p.kind!=='productionEntryForm.backup'||!p.auth||!Array.isArray(p.auth.users)||!p.auth.users.length||!p.data||!p.data.iv||!p.data.ct)return 'That file is not a backup from this form.';
+  if(!lsSet(AUTH_KEY,JSON.stringify(p.auth))||!lsSet(DATA_KEY,JSON.stringify(p.data)))return 'The browser would not store the backup (storage blocked).';
+  clearFail(); return '';
+}
+$('encExport').addEventListener('click',encExport);
+$('encRestoreBtn').addEventListener('click',function(){$('encRestoreFile').click();});
+$('encRestoreFile').addEventListener('change',function(ev){
+  var f=ev.target.files[0]; if(!f||me.role!=='admin')return;
+  if(!confirm('Restoring replaces ALL current data and users with the backup. You will be signed out and must sign in with a user ID and password from that backup. Continue?')){ev.target.value='';return;}
+  var rd=new FileReader();
+  rd.onload=async function(){
+    try{await saveQ;}catch(e){}
+    var err=restorePack(String(rd.result));
+    if(err){toast(err,true);return;}
+    loadAuth(); lastUserKey=null; await lock('Backup restored. Sign in with a user ID and password from the backup.');
+  };
+  rd.readAsText(f); ev.target.value='';
+});
+$('restoreLink').addEventListener('click',function(){$('restoreFileSetup').click();});
+$('restoreFileSetup').addEventListener('change',function(ev){
+  var f=ev.target.files[0]; if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){
+    var err=restorePack(String(rd.result));
+    if(err){authMsg(err,true);return;}
+    loadAuth(); showAuth('Backup restored. Sign in with the user ID and password from the backup.',false);
+  };
+  rd.readAsText(f); ev.target.value='';
+});
+
+/* ================= users ================= */
+function adminCount(){return store.accounts.filter(function(a){return a.role==='admin';}).length;}
+function renderUsers(){
+  if(!store||!me||me.role!=='admin')return;
+  var h='<thead><tr><th>User ID</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>';
+  store.accounts.forEach(function(a){
+    var self=a.id.toLowerCase()===me.key;
+    var roleCell=self?esc(ROLES[a.role]):'<select data-urole="'+esc(a.id)+'" style="font-size:13px;padding:5px">'+Object.keys(ROLES).map(function(k){return '<option value="'+k+'"'+(k===a.role?' selected':'')+'>'+ROLES[k]+'</option>';}).join('')+'</select>';
+    h+='<tr><td>'+esc(a.id)+(self?' (you)':'')+'</td><td>'+roleCell+'</td><td>'+(a.mustChange?'Must set a new password':'Active')+'</td><td>'+(self?'':'<button class="b sm del" data-udel="'+esc(a.id)+'">Delete</button>')+'</td></tr>';
+  });
+  $('userTable').innerHTML=h+'</tbody>';
+  $('r_user').innerHTML=store.accounts.filter(function(a){return a.id.toLowerCase()!==me.key;}).map(function(a){return '<option>'+esc(a.id)+'</option>';}).join('');
+}
+$('addUserBtn').addEventListener('click',async function(){
+  if(me.role!=='admin')return;
+  var idv=$('u_id').value.trim(), pw=$('u_pw').value, role=$('u_role').value;
+  if(!ID_RE.test(idv)){toast('User ID: 3-30 letters, numbers, . _ -',true);return;}
+  if(findAcct(idv)||findAuth(idv)){toast('That user ID already exists',true);return;}
+  var pe=pwErr(pw,idv); if(pe){toast(pe,true);return;}
+  if(!ROLES[role])return;
+  $('addUserBtn').disabled=true;
+  try{
+    var w=await wrapKey(dataKey,pw);
+    auth.users.push(Object.assign({id:idv.toLowerCase(),name:idv},w));
+    store.accounts.push({id:idv,role:role,mustChange:true});
+    addUnique(store.lists.operators,idv);
+    saveAuth(); fillLists(); renderUsers();
+    $('u_id').value=''; $('u_pw').value='';
+    toast('User added. Give them the temporary password.'); await save();
+  }catch(e){toast('Could not add user: '+e.message,true);}
+  finally{$('addUserBtn').disabled=false;}
+});
+$('resetPwBtn').addEventListener('click',async function(){
+  if(me.role!=='admin')return;
+  var idv=$('r_user').value, pw=$('r_pw').value;
+  if(!idv){toast('Choose a user',true);return;}
+  var pe=pwErr(pw,idv); if(pe){toast(pe,true);return;}
+  var u=findAuth(idv), a=findAcct(idv); if(!u||!a)return;
+  $('resetPwBtn').disabled=true;
+  try{
+    var w=await wrapKey(dataKey,pw);
+    Object.assign(u,w); a.mustChange=true;
+    saveAuth(); renderUsers(); $('r_pw').value='';
+    toast('Password reset. The user must choose a new one at next sign-in.'); await save();
+  }catch(e){toast('Could not reset: '+e.message,true);}
+  finally{$('resetPwBtn').disabled=false;}
+});
+$('userTable').addEventListener('click',async function(ev){
+  var b=ev.target.closest('button'); if(!b||me.role!=='admin')return;
+  var idv=b.getAttribute('data-udel'); if(!idv)return;
+  var a=findAcct(idv); if(!a||a.id.toLowerCase()===me.key)return;
+  if(a.role==='admin'&&adminCount()<2){toast('You cannot delete the last administrator',true);return;}
+  if(!confirm('Delete user "'+a.id+'"? Their past entries are kept.'))return;
+  auth.users=auth.users.filter(function(u){return u.id!==idv.toLowerCase();});
+  store.accounts=store.accounts.filter(function(x){return x.id.toLowerCase()!==idv.toLowerCase();});
+  saveAuth(); renderUsers(); toast('User deleted'); await save();
+});
+$('userTable').addEventListener('change',async function(ev){
+  var s=ev.target; if(!s||me.role!=='admin')return;
+  var idv=s.getAttribute&&s.getAttribute('data-urole'); if(!idv)return;
+  var a=findAcct(idv); if(!a||a.id.toLowerCase()===me.key||!ROLES[s.value])return;
+  a.role=s.value; toast('Role updated'); await save();
+});
+
+/* ================= my account ================= */
+$('chgPwBtn').addEventListener('click',async function(){
+  var cur=$('a_cur').value, nw=$('a_new').value, nw2=$('a_new2').value;
+  if(!cur){toast('Enter your current password',true);return;}
+  var pe=pwErr(nw,me.id); if(pe){toast(pe,true);return;}
+  if(nw!==nw2){toast('The new passwords do not match',true);return;}
+  if(nw===cur){toast('Choose a password different from the current one',true);return;}
+  var u=findAuth(me.id); if(!u)return;
+  $('chgPwBtn').disabled=true;
+  try{
+    try{await unwrapKey(u,cur);}catch(e){toast('Current password is wrong',true);return;}
+    var w=await wrapKey(dataKey,nw);
+    Object.assign(u,w);
+    var a=findAcct(me.key); if(a)a.mustChange=false;
+    forceChange=false; saveAuth(); applyRoles();
+    ['a_cur','a_new','a_new2'].forEach(function(id){$(id).value='';});
+    on($('chgNote'),false);
+    toast('Password changed'); await save();
+    show('entry');
+  }catch(e){toast('Could not change password: '+e.message,true);}
+  finally{$('chgPwBtn').disabled=false;}
+});
+
+/* ================= tabs ================= */
+var TABS=['entry','records','summary','settings','users','account'];
+function show(tab){
+  if(!me)return;
+  if(forceChange&&tab!=='account'){tab='account';toast('Choose a new password first.',true);}
+  var btn=document.querySelector('#nav button[data-tab="'+tab+'"]');
+  if(btn&&!allowed(btn))tab='entry';
+  TABS.forEach(function(t){on($('tab-'+t),t===tab);});
+  document.querySelectorAll('#nav button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')===tab);});
+  if(tab==='records')renderRecords();
+  if(tab==='summary')renderSummary();
+  if(tab==='users')renderUsers();
+  if(tab==='account'){$('a_who').textContent='Signed in as '+me.id+' - '+ROLES[me.role];on($('chgNote'),forceChange);}
+}
+$('nav').addEventListener('click',function(ev){var b=ev.target.closest('button');if(b)show(b.getAttribute('data-tab'));});
+
+/* ================= start ================= */
+$('setupForm').addEventListener('submit',doSetup);
+$('loginForm').addEventListener('submit',doLogin);
+$('logoutBtn').addEventListener('click',function(){lock('You have been signed out.');});
+$('showPw').addEventListener('change',function(){$('l_pw').type=$('showPw').checked?'text':'password';});
+
+(function init(){
+  var okCrypto=!!(window.crypto&&window.crypto.subtle&&window.isSecureContext!==false);
+  var probe='productionEntryForm.probe'; if(!lsSet(probe,'1'))memOnly=true; else lsDel(probe);
+  loadAuth();
+  if(!okCrypto){
+    var w=$('authWarn'); w.textContent='This browser is blocking the secure features this form needs. Open the file in a current version of Chrome, Edge, Firefox or Safari.'; on(w,true);
+    $('setupBtn').disabled=true; $('loginBtn').disabled=true;
+  }else if(memOnly){
+    var w2=$('authWarn'); w2.textContent='Storage is blocked in this browser (private window?). Accounts and entries cannot be saved after you close the page.'; on(w2,true);
+  }
+  showAuth('',false);
+})();
+})();
+</script>
+</body>
+</html>
